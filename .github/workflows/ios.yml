@@ -30,6 +30,11 @@ jobs:
       - name: Add iOS Platform
         run: npx cap add ios
 
+      - name: Ensure Pods are Installed (Fix for missing workspace)
+        run: |
+          cd ios/App
+          pod install
+
       - name: Build iOS App
         run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphoneos -configuration Release archive -archivePath $PWD/build/App.xcarchive clean archive CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 

@@ -108,6 +108,7 @@ const App: React.FC = () => {
     result: null,
     error: null
   });
+  const [showInterstitial, setShowInterstitial] = useState(false);
 
   // Translation State
   const [language, setLanguage] = useState<Language>('en');
@@ -305,10 +306,16 @@ const App: React.FC = () => {
       else if (result.status === SafetyStatus.DANGER || result.status === SafetyStatus.CRITICAL) triggerHaptic('alarm');
       else triggerHaptic('tap');
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Show Interstitial Result
       setScanState({ isScanning: false, result, error: null });
+      setShowInterstitial(true);
       setHistory(prev => [result, ...prev].slice(0, 10));
       setShowSymptoms(false);
+
+      // Auto-hide interstitial after delay
+      setTimeout(() => {
+        setShowInterstitial(false);
+      }, 2500);
     } catch (err: any) {
       triggerHaptic('error');
       clearInterval(stepInterval);
@@ -542,12 +549,7 @@ const App: React.FC = () => {
           >
             <Stethoscope className="w-5 h-5" />
           </button>
-          <button
-            onClick={() => { triggerHaptic('tap'); setShowHistory(!showHistory); }}
-            className="p-2 rounded-full bg-white/10 text-white"
-          >
-            <History className="w-5 h-5" />
-          </button>
+
         </div>
       </header>
 
@@ -651,7 +653,19 @@ const App: React.FC = () => {
           )}
 
           {scanState.result && (
-            <div className="absolute inset-0 z-30 bg-[#080a0c] overflow-y-auto p-0 flex flex-col animate-in slide-in-from-bottom duration-500 pb-32">
+            <div className={`absolute inset-0 z-30 bg-[#080a0c] overflow-y-auto p-0 flex flex-col animate-in slide-in-from-bottom duration-500 pb-32`}>
+
+              {/* INTERSTITIAL WARNING SCREEN */}
+              {showInterstitial && (
+                <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center animate-in fade-in duration-300 ${getStatusConfig(scanState.result.status).bg.replace('/15', '/95').replace('/20', '/95')} backdrop-blur-2xl`}>
+                  <div className="scale-150 transform transition-all duration-1000 animate-pulse">
+                    {React.cloneElement(getStatusConfig(scanState.result.status).icon as React.ReactElement<any>, { className: `w-32 h-32 ${getStatusConfig(scanState.result.status).text.split(' ')[0]} drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]` })}
+                  </div>
+                  <h1 className={`mt-12 text-6xl font-black tracking-tighter uppercase ${getStatusConfig(scanState.result.status).text} drop-shadow-2xl scale-125`}>
+                    {getStatusConfig(scanState.result.status).label}
+                  </h1>
+                </div>
+              )}
               <div className={`p-8 pb-10 rounded-b-[3.5rem] shadow-2xl relative overflow-hidden ${getStatusConfig(scanState.result.status).bg}`}>
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                   <SafeDrinkLogo className="h-32" hideText isDarkMode />
@@ -850,44 +864,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {showHistory && (
-        <div className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-3xl flex justify-end animate-in fade-in duration-300">
-          <div className={`w-full max-sm:max-w-full max-w-sm ${isDarkMode ? 'bg-[#0a0c0e]' : 'bg-slate-900'} h-full p-8 shadow-2xl flex flex-col border-l border-white/10`}>
-            <div className="flex items-center justify-between mb-10">
-              <div className="space-y-1">
-                <h3 className="text-2xl font-black text-[#4FC3F7] flex items-center gap-3 uppercase tracking-tighter"><History className="w-7 h-7" /> {t('logArchive')}</h3>
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{t('recentSessions')}</p>
-              </div>
-              <button onClick={() => { triggerHaptic('tap'); setShowHistory(false); }} className="p-2.5 bg-white/5 rounded-xl"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-              {history.map((item, i) => (
-                <div key={i} className="bg-white/5 p-5 rounded-[2rem] flex items-center gap-5 border border-white/5 active:scale-95 transition-all">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${getStatusConfig(item.status).bg} border ${getStatusConfig(item.status).border}`}>
-                    {React.cloneElement(getStatusConfig(item.status).icon as React.ReactElement<any>, { className: 'w-7 h-7' })}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-black text-sm truncate uppercase tracking-tight">{item.drinkType}</h4>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className={`text-[9px] font-black tracking-widest uppercase ${getStatusConfig(item.status).text}`}>{item.status}</p>
-                      <span className="text-[8px] font-bold text-white/20 uppercase">Recent</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {history.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-white/10 text-center gap-6">
-                  <div className="p-8 bg-white/5 rounded-full"><Activity className="w-16 h-16" /></div>
-                  <div className="space-y-2">
-                    <p className="text-base font-black uppercase tracking-widest">{t('archiveEmpty')}</p>
-                    <p className="text-xs font-medium text-white/20 px-10">{t('archiveEmptyDesc')}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+
       <canvas ref={canvasRef} className="hidden" />
 
       <style>{`
